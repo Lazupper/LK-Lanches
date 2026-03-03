@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Painel Admin | LK Lanches</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+    <nav class="bg-red-600 text-white p-4 flex justify-between items-center shadow-lg">
+        <h1 class="font-bold text-xl">LK Lanches ADMIN</h1>
+        <div class="space-x-4">
+            <button onclick="aba('pedidos')">Pedidos</button>
+            <button onclick="aba('cardapio')">Cardápio</button>
+            <button onclick="aba('config')">Loja</button>
+        </div>
+    </nav>
+
+    <div class="max-w-4xl mx-auto p-4">
+        <!-- PEDIDOS -->
+        <section id="aba-pedidos" class="space-y-4">
+            <h2 class="text-2xl font-bold">Pedidos Novos</h2>
+            <div id="lista-pedidos" class="space-y-3"></div>
+        </section>
+
+        <!-- CARDAPIO -->
+        <section id="aba-cardapio" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-sm">
+                <h2 class="font-bold mb-4">Adicionar Lanche</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <input id="p-nome" type="text" placeholder="Nome" class="border p-2 rounded">
+                    <input id="p-preco" type="number" placeholder="Preço" class="border p-2 rounded">
+                    <input id="p-img" type="text" placeholder="Link da Imagem" class="border p-2 rounded">
+                    <select id="p-cat" class="border p-2 rounded">
+                        <option value="Lanches">Lanches</option>
+                        <option value="Bebidas">Bebidas</option>
+                    </select>
+                </div>
+                <button onclick="addProduto()" class="w-full bg-green-500 text-white mt-4 p-2 rounded font-bold">Salvar Lanche</button>
+            </div>
+            <div id="lista-cardapio" class="grid grid-cols-1 gap-2"></div>
+        </section>
+
+        <!-- CONFIG -->
+        <section id="aba-config" class="hidden bg-white p-6 rounded-xl shadow-sm">
+            <h2 class="font-bold mb-4">Configurar Loja</h2>
+            <label class="block mb-2">Taxa de Entrega (R$)</label>
+            <input id="c-taxa" type="number" class="border p-2 w-full mb-4">
+            <label class="block mb-2">Status da Loja</label>
+            <select id="c-aberta" class="border p-2 w-full mb-6">
+                <option value="true">Aberta</option>
+                <option value="false">Fechada</option>
+            </select>
+            <button onclick="saveConfig()" class="w-full bg-blue-600 text-white p-2 rounded font-bold">Salvar Alterações</button>
+        </section>
+    </div>
+
+    <script>
+        const _URL = "https://ctxmprogrnsretxlmogf.supabase.co";
+        const _KEY = "sb_publishable_lTYnZuQKccyFvNmfSMgDcw_wfIBa-YG";
+        const supabase = window.supabase.createClient(_URL, _KEY);
+
+        function aba(nome) {
+            document.getElementById('aba-pedidos').classList.add('hidden');
+            document.getElementById('aba-cardapio').classList.add('hidden');
+            document.getElementById('aba-config').classList.add('hidden');
+            document.getElementById('aba-' + nome).classList.remove('hidden');
+        }
+
+        async function carregarPedidos() {
+            const { data } = await supabase.from('pedidos').select('*').order('id', {ascending: false});
+            document.getElementById('lista-pedidos').innerHTML = data.map(p => `
+                <div class="bg-white p-4 rounded shadow border-l-4 ${p.status === 'Pendente' ? 'border-yellow-400' : 'border-green-500'}">
+                    <div class="flex justify-between"><strong>${p.cliente}</strong> <span>R$ ${p.total.toFixed(2)}</span></div>
+                    <p class="text-sm text-gray-600">${p.itens}</p>
+                    <div class="flex gap-2 mt-3">
+                        <button onclick="status(${p.id}, 'Preparando')" class="bg-blue-100 text-blue-700 px-2 rounded text-xs">Preparando</button>
+                        <button onclick="status(${p.id}, 'Saiu')" class="bg-orange-100 text-orange-700 px-2 rounded text-xs">Saiu</button>
+                        <button onclick="status(${p.id}, 'Entregue')" class="bg-green-100 text-green-700 px-2 rounded text-xs">Concluído</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function addProduto() {
+            const nome = document.getElementById('p-nome').value;
+            const preco = document.getElementById('p-preco').value;
+            const imagem_url = document.getElementById('p-img').value;
+            const categoria = document.getElementById('p-cat').value;
+            await supabase.from('produtos').insert([{nome, preco, imagem_url, categoria}]);
+            location.reload();
+        }
+
+        async function status(id, s) {
+            await supabase.from('pedidos').update({status: s}).eq('id', id);
+            carregarPedidos();
+        }
+
+        async function saveConfig() {
+            const taxa = document.getElementById('c-taxa').value;
+            const aberta = document.getElementById('c-aberta').value;
+            await supabase.from('configuracoes').update({taxa_entrega: taxa, loja_aberta: aberta}).eq('id', 1);
+            alert("Atualizado!");
+        }
+
+        setInterval(carregarPedidos, 5000);
+        carregarPedidos();
+    </script>
+</body>
+</html>
