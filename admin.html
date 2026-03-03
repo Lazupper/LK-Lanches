@@ -52,78 +52,74 @@
             <button onclick="saveConfig()" class="w-full bg-blue-600 text-white p-2 rounded font-bold">Salvar Alterações</button>
         </section>
     </div>
-
-    <script>
-        const _URL = "https://ctxmprogrnsretxlmogf.supabase.co";
+<script>
+    // 1. CONFIGURAÇÃO (Coloque suas chaves aqui)
+           const _URL = "https://ctxmprogrnsretxlmogf.supabase.co";
         const _KEY = "sb_publishable_lTYnZuQKccyFvNmfSMgDcw_wfIBa-YG";
-        const _supabase = window.supabase.createClient(_URL, _KEY); 
 
-        function aba(nome) {
-            document.getElementById('aba-pedidos').classList.add('hidden');
-            document.getElementById('aba-cardapio').classList.add('hidden');
-            document.getElementById('aba-config').classList.add('hidden');
-            document.getElementById('aba-' + nome).classList.remove('hidden');
-        }
+    // 2. INICIALIZAÇÃO (O segredo está aqui: _supabase com underline)
+    const _supabase = window.supabase.createClient(_URL, _KEY);
 
-        async function carregarPedidos() {
-            const { data } = await supabase.from('pedidos').select('*').order('id', {ascending: false});
+    // 3. FUNÇÃO PARA MUDAR DE ABA
+    function aba(nome) {
+        document.getElementById('aba-pedidos').classList.add('hidden');
+        document.getElementById('aba-cardapio').classList.add('hidden');
+        document.getElementById('aba-config').classList.add('hidden');
+        document.getElementById('aba-' + nome).classList.remove('hidden');
+    }
+
+    // 4. CARREGAR PEDIDOS (Corrigido para _supabase)
+    async function carregarPedidos() {
+        try {
+            const { data, error } = await _supabase.from('pedidos').select('*').order('id', {ascending: false});
+            if (error) throw error;
+
             document.getElementById('lista-pedidos').innerHTML = data.map(p => `
                 <div class="bg-white p-4 rounded shadow border-l-4 ${p.status === 'Pendente' ? 'border-yellow-400' : 'border-green-500'}">
-                    <div class="flex justify-between"><strong>${p.cliente}</strong> <span>R$ ${p.total.toFixed(2)}</span></div>
+                    <div class="flex justify-between"><strong>${p.cliente}</strong> <span>R$ ${Number(p.total).toFixed(2)}</span></div>
                     <p class="text-sm text-gray-600">${p.itens}</p>
                     <div class="flex gap-2 mt-3">
-                        <button onclick="status(${p.id}, 'Preparando')" class="bg-blue-100 text-blue-700 px-2 rounded text-xs">Preparando</button>
-                        <button onclick="status(${p.id}, 'Saiu')" class="bg-orange-100 text-orange-700 px-2 rounded text-xs">Saiu</button>
-                        <button onclick="status(${p.id}, 'Entregue')" class="bg-green-100 text-green-700 px-2 rounded text-xs">Concluído</button>
+                        <button onclick="statusPedido(${p.id}, 'Preparando')" class="bg-blue-100 text-blue-700 px-2 rounded text-xs">Preparando</button>
+                        <button onclick="statusPedido(${p.id}, 'Saiu')" class="bg-orange-100 text-orange-700 px-2 rounded text-xs">Saiu</button>
+                        <button onclick="statusPedido(${p.id}, 'Entregue')" class="bg-green-100 text-green-700 px-2 rounded text-xs">Concluído</button>
                     </div>
                 </div>
             `).join('');
+        } catch (err) {
+            console.error("Erro ao carregar pedidos:", err.message);
         }
+    }
 
-      async function addProduto() {
-    const nome = document.getElementById('p-nome').value;
-    const preco = document.getElementById('p-preco').value;
-    const categoria = document.getElementById('p-cat').value;
-    const file = document.getElementById('p-file').files[0];
+    // 5. ADICIONAR PRODUTO (Corrigido para _supabase)
+    async function addProduto() {
+        const nome = document.getElementById('p-nome').value;
+        const preco = document.getElementById('p-preco').value;
+        const imagem_url = document.getElementById('p-img').value;
+        const categoria = document.getElementById('p-cat').value;
 
-    if (!file) return alert("Selecione uma foto!");
+        const { error } = await _supabase.from('produtos').insert([{nome, preco, imagem_url, categoria}]);
+        
+        if (error) alert("Erro ao salvar: " + error.message);
+        else location.reload();
+    }
 
-    // 1. Faz o upload da foto para a pasta 'fotos'
-    const fileName = Date.now() + "_" + file.name;
-    const { data: uploadData, error: uploadError } = await _supabase.storage
-        .from('fotos')
-        .upload(fileName, file);
-
-    if (uploadError) return alert("Erro no upload: " + uploadError.message);
-
-    // 2. Pega o link público da foto que acabou de subir
-    const { data: urlData } = _supabase.storage
-        .from('fotos')
-        .getPublicUrl(fileName);
-
-    const imagem_url = urlData.publicUrl;
-
-    // 3. Salva o produto com o link da foto oficial
-    await _supabase.from('produtos').insert([{ nome, preco, imagem_url, categoria }]);
-    
-    alert("Lanche salvo com sucesso!");
-    location.reload();
-}
-
-        async function status(id, s) {
-            await supabase.from('pedidos').update({status: s}).eq('id', id);
-            carregarPedidos();
-        }
-
-        async function saveConfig() {
-            const taxa = document.getElementById('c-taxa').value;
-            const aberta = document.getElementById('c-aberta').value;
-            await supabase.from('configuracoes').update({taxa_entrega: taxa, loja_aberta: aberta}).eq('id', 1);
-            alert("Atualizado!");
-        }
-
-        setInterval(carregarPedidos, 5000);
+    // 6. ATUALIZAR STATUS (Corrigido para _supabase)
+    async function statusPedido(id, s) {
+        await _supabase.from('pedidos').update({status: s}).eq('id', id);
         carregarPedidos();
-    </script>
+    }
+
+    // 7. SALVAR CONFIGURAÇÕES (Corrigido para _supabase)
+    async function saveConfig() {
+        const taxa = document.getElementById('c-taxa').value;
+        const aberta = document.getElementById('c-aberta').value;
+        await _supabase.from('configuracoes').update({taxa_entrega: taxa, loja_aberta: aberta}).eq('id', 1);
+        alert("Atualizado!");
+    }
+
+    // 8. EXECUÇÃO INICIAL
+    setInterval(carregarPedidos, 5000); // Atualiza a cada 5 segundos
+    carregarPedidos();
+</script>
 </body>
 </html>
