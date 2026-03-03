@@ -7,120 +7,93 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        .category-scroll::-webkit-scrollbar { display: none; }
-        .bg-ifood { background-color: #ea1d2c; }
-        .text-ifood { color: #ea1d2c; }
-    </style>
 </head>
 <body class="bg-gray-50 pb-24">
-
-    <!-- Header -->
-    <header class="bg-white p-4 shadow-sm sticky top-0 z-50">
-        <div class="max-w-xl mx-auto flex justify-between items-center">
-            <h1 class="text-2xl font-bold text-ifood">LK Lanches</h1>
-            <button onclick="abrirRastreio()" class="text-gray-600 font-medium">
-                <i class="fas fa-search-location"></i> Rastrear
-            </button>
-        </div>
+    <header class="bg-white p-4 shadow-sm sticky top-0 z-50 text-center">
+        <h1 class="text-2xl font-bold text-red-600">LK Lanches</h1>
+        <button onclick="rastrear()" class="text-xs text-gray-500 underline mt-1">Acompanhar Pedido</button>
     </header>
 
-    <!-- Banner Loja Aberta/Fechada -->
-    <div id="status-loja" class="hidden text-center p-2 text-white font-bold"></div>
+    <div id="status-loja" class="p-1 text-center text-white text-xs font-bold hidden"></div>
 
-    <!-- Categorias -->
-    <div class="p-4 overflow-x-auto flex gap-4 category-scroll max-w-xl mx-auto">
-        <button onclick="filtrar('Todos')" class="bg-white px-6 py-2 rounded-full shadow-sm border">Todos</button>
-        <button onclick="filtrar('Lanches')" class="bg-white px-6 py-2 rounded-full shadow-sm border">🍔 Lanches</button>
-        <button onclick="filtrar('Bebidas')" class="bg-white px-6 py-2 rounded-full shadow-sm border">🥤 Bebidas</button>
-    </div>
-
-    <!-- Cardápio -->
     <main id="menu" class="p-4 max-w-xl mx-auto space-y-4">
-        <p class="text-center text-gray-500">Carregando cardápio...</p>
+        <p class="text-center text-gray-400">Carregando cardápio...</p>
     </main>
 
-    <!-- Barra do Carrinho -->
     <div id="cart-bar" class="fixed bottom-0 left-0 right-0 bg-white p-4 border-t hidden shadow-2xl">
         <div class="max-w-xl mx-auto flex justify-between items-center">
             <div>
-                <p class="text-xs text-gray-500">Total com frete</p>
-                <p id="total-text" class="text-lg font-bold">R$ 0,00</p>
+                <p class="text-xs text-gray-500">Total com entrega</p>
+                <p id="total-cart" class="text-lg font-bold">R$ 0,00</p>
             </div>
-            <button onclick="finalizarPedido()" class="bg-ifood text-white px-8 py-3 rounded-xl font-bold">
-                Fechar Pedido
-            </button>
+            <button onclick="fecharPedido()" class="bg-red-600 text-white px-8 py-3 rounded-xl font-bold">Fechar Pedido</button>
         </div>
     </div>
 
-  <script>
-    // 1. CONFIGURAÇÃO (Coloque suas chaves aqui)
-    const _URL = "https://ctxmprogrnsretxlmogf.supabase.co";
-    const _KEY = "sb_publishable_lTYnZuQKccyFvNmfSMgDcw_wfIBa-YG";
+    <script>
+        const _URL = "https://ctxmprogrnsretxlmogf.supabase.co";
+        const _KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN0eG1wcm9ncm5zcmV0eGxtb2dmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0OTYyOTQsImV4cCI6MjA4ODA3MjI5NH0.AivDE28NG4X5-C6vbn8bkyByVcSoLhL9oOwPP5pPWII";
+        const _supabase = window.supabase.createClient(_URL, _KEY);
 
-    // 2. INICIALIZAÇÃO (O segredo está aqui: _supabase com underline)
-    const _supabase = window.supabase.createClient(_URL, _KEY);
+        let carrinho = [];
+        let taxa = 0;
 
-    // 3. FUNÇÃO PARA MUDAR DE ABA
-    function aba(nome) {
-        document.getElementById('aba-pedidos').classList.add('hidden');
-        document.getElementById('aba-cardapio').classList.add('hidden');
-        document.getElementById('aba-config').classList.add('hidden');
-        document.getElementById('aba-' + nome).classList.remove('hidden');
-    }
+        async function init() {
+            const { data: config } = await _supabase.from('configuracoes').select('*').single();
+            const { data: produtos } = await _supabase.from('produtos').select('*').eq('disponivel', true);
+            
+            taxa = config.taxa_entrega;
+            const banner = document.getElementById('status-loja');
+            banner.innerText = config.loja_aberta ? "LOJA ABERTA" : "LOJA FECHADA";
+            banner.className = `p-1 text-center text-white text-xs font-bold block ${config.loja_aberta ? 'bg-green-500' : 'bg-red-500'}`;
 
-    // 4. CARREGAR PEDIDOS (Corrigido para _supabase)
-    async function carregarPedidos() {
-        try {
-            const { data, error } = await _supabase.from('pedidos').select('*').order('id', {ascending: false});
-            if (error) throw error;
-
-            document.getElementById('lista-pedidos').innerHTML = data.map(p => `
-                <div class="bg-white p-4 rounded shadow border-l-4 ${p.status === 'Pendente' ? 'border-yellow-400' : 'border-green-500'}">
-                    <div class="flex justify-between"><strong>${p.cliente}</strong> <span>R$ ${Number(p.total).toFixed(2)}</span></div>
-                    <p class="text-sm text-gray-600">${p.itens}</p>
-                    <div class="flex gap-2 mt-3">
-                        <button onclick="statusPedido(${p.id}, 'Preparando')" class="bg-blue-100 text-blue-700 px-2 rounded text-xs">Preparando</button>
-                        <button onclick="statusPedido(${p.id}, 'Saiu')" class="bg-orange-100 text-orange-700 px-2 rounded text-xs">Saiu</button>
-                        <button onclick="statusPedido(${p.id}, 'Entregue')" class="bg-green-100 text-green-700 px-2 rounded text-xs">Concluído</button>
+            document.getElementById('menu').innerHTML = produtos.map(p => `
+                <div class="bg-white p-4 rounded-xl shadow-sm border flex justify-between">
+                    <div class="flex-1">
+                        <h3 class="font-bold">${p.nome}</h3>
+                        <p class="text-xs text-gray-500">${p.descricao}</p>
+                        <p class="text-red-600 font-bold mt-2">R$ ${Number(p.preco).toFixed(2)}</p>
+                    </div>
+                    <div class="ml-4 text-right">
+                        <img src="${p.imagem_url}" class="w-16 h-16 rounded-lg object-cover mb-2">
+                        <button onclick="add('${p.nome}', ${p.preco})" class="bg-red-50 text-red-600 p-2 rounded-lg"><i class="fas fa-plus"></i></button>
                     </div>
                 </div>
             `).join('');
-        } catch (err) {
-            console.error("Erro ao carregar pedidos:", err.message);
         }
-    }
 
-    // 5. ADICIONAR PRODUTO (Corrigido para _supabase)
-    async function addProduto() {
-        const nome = document.getElementById('p-nome').value;
-        const preco = document.getElementById('p-preco').value;
-        const imagem_url = document.getElementById('p-img').value;
-        const categoria = document.getElementById('p-cat').value;
+        function add(nome, preco) {
+            carrinho.push({nome, preco});
+            const total = carrinho.reduce((a, b) => a + b.preco, 0) + taxa;
+            document.getElementById('cart-bar').classList.remove('hidden');
+            document.getElementById('total-cart').innerText = `R$ ${total.toFixed(2)}`;
+        }
 
-        const { error } = await _supabase.from('produtos').insert([{nome, preco, imagem_url, categoria}]);
-        
-        if (error) alert("Erro ao salvar: " + error.message);
-        else location.reload();
-    }
+        async function fecharPedido() {
+            const nome = prompt("Seu nome:");
+            const endereco = prompt("Endereço completo:");
+            if(!nome || !endereco) return;
 
-    // 6. ATUALIZAR STATUS (Corrigido para _supabase)
-    async function statusPedido(id, s) {
-        await _supabase.from('pedidos').update({status: s}).eq('id', id);
-        carregarPedidos();
-    }
+            const total = carrinho.reduce((a, b) => a + b.preco, 0) + taxa;
+            const itens = carrinho.map(i => i.nome).join(", ");
 
-    // 7. SALVAR CONFIGURAÇÕES (Corrigido para _supabase)
-    async function saveConfig() {
-        const taxa = document.getElementById('c-taxa').value;
-        const aberta = document.getElementById('c-aberta').value;
-        await _supabase.from('configuracoes').update({taxa_entrega: taxa, loja_aberta: aberta}).eq('id', 1);
-        alert("Atualizado!");
-    }
+            const { error } = await _supabase.from('pedidos').insert([{ cliente: nome, itens, total, endereco }]);
+            
+            if(!error) {
+                alert("Pedido Enviado!");
+                window.open(`https://wa.me/558393884472?text=Novo Pedido: ${itens}%0ATotal: R$ ${total.toFixed(2)}%0AEndereço: ${endereco}`);
+                location.reload();
+            }
+        }
 
-    // 8. EXECUÇÃO INICIAL
-    setInterval(carregarPedidos, 5000); // Atualiza a cada 5 segundos
-    carregarPedidos();
-</script>
+        async function rastrear() {
+            const nome = prompt("Digite seu nome:");
+            const { data } = await _supabase.from('pedidos').select('status').eq('cliente', nome).order('id', {ascending: false}).limit(1);
+            if(data.length) alert("Status do seu pedido: " + data[0].status);
+            else alert("Pedido não encontrado.");
+        }
+
+        init();
+    </script>
 </body>
 </html>
