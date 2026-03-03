@@ -2,124 +2,103 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Painel Admin | LK Lanches</title>
+    <title>LK Admin | Painel</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-gray-100 min-h-screen">
-
     <nav class="bg-red-600 text-white p-4 flex justify-between items-center shadow-lg">
-        <h1 class="font-bold text-xl">LK Lanches ADMIN</h1>
-        <div class="space-x-4">
+        <h1 class="font-bold">LK ADMIN</h1>
+        <div class="space-x-4 text-xs">
             <button onclick="aba('pedidos')">Pedidos</button>
             <button onclick="aba('cardapio')">Cardápio</button>
-            <button onclick="aba('config')">Loja</button>
+            <button onclick="aba('config')">Ajustes</button>
         </div>
     </nav>
 
-    <div class="max-w-4xl mx-auto p-4">
+    <div class="max-w-2xl mx-auto p-4">
         <!-- PEDIDOS -->
-        <section id="aba-pedidos" class="space-y-4">
-            <h2 class="text-2xl font-bold">Pedidos Novos</h2>
-            <div id="lista-pedidos" class="space-y-3"></div>
+        <section id="sec-pedidos" class="space-y-4">
+            <h2 class="font-bold">Pedidos Novos</h2>
+            <div id="lista-pedidos" class="space-y-2"></div>
         </section>
 
         <!-- CARDAPIO -->
-       <div class="bg-white p-6 rounded-xl shadow-sm">
-    <h2 class="font-bold mb-4">Adicionar Lanche</h2>
-    <div class="grid grid-cols-2 gap-4">
-        <input id="p-nome" type="text" placeholder="Nome" class="border p-2 rounded">
-        <input id="p-preco" type="number" placeholder="Preço" class="border p-2 rounded">
-        <!-- Trocamos o input de texto por arquivo -->
-        <input id="p-file" type="file" accept="image/*" class="border p-2 rounded text-sm">
-        <select id="p-cat" class="border p-2 rounded">
-            <option value="Lanches">Lanches</option>
-            <option value="Bebidas">Bebidas</option>
-        </select>
-    </div>
-    <button onclick="addProduto()" class="w-full bg-green-500 text-white mt-4 p-2 rounded font-bold">Salvar Lanche</button>
-</div>
+        <section id="sec-cardapio" class="hidden space-y-4">
+            <div class="bg-white p-4 rounded-lg shadow">
+                <input id="p-nome" type="text" placeholder="Nome" class="border w-full p-2 mb-2">
+                <input id="p-preco" type="number" placeholder="Preço" class="border w-full p-2 mb-2">
+                <input id="p-desc" type="text" placeholder="Ingredientes" class="border w-full p-2 mb-2">
+                <input id="p-img" type="text" placeholder="Link da Imagem" class="border w-full p-2 mb-2">
+                <button onclick="salvarLanche()" class="w-full bg-green-600 text-white p-2 rounded font-bold">Adicionar</button>
+            </div>
+            <div id="lista-cardapio" class="space-y-2"></div>
+        </section>
+
         <!-- CONFIG -->
-        <section id="aba-config" class="hidden bg-white p-6 rounded-xl shadow-sm">
-            <h2 class="font-bold mb-4">Configurar Loja</h2>
-            <label class="block mb-2">Taxa de Entrega (R$)</label>
-            <input id="c-taxa" type="number" class="border p-2 w-full mb-4">
-            <label class="block mb-2">Status da Loja</label>
-            <select id="c-aberta" class="border p-2 w-full mb-6">
+        <section id="sec-config" class="hidden bg-white p-4 rounded-lg shadow">
+            <h2 class="font-bold mb-4">Ajustes da Loja</h2>
+            <label class="text-sm">Taxa de Entrega (R$)</label>
+            <input id="c-taxa" type="number" class="border w-full p-2 mb-4">
+            <label class="text-sm">Status da Loja</label>
+            <select id="c-aberta" class="border w-full p-2 mb-4">
                 <option value="true">Aberta</option>
                 <option value="false">Fechada</option>
             </select>
-            <button onclick="saveConfig()" class="w-full bg-blue-600 text-white p-2 rounded font-bold">Salvar Alterações</button>
+            <button onclick="salvarConfig()" class="w-full bg-blue-600 text-white p-2 rounded font-bold">Salvar</button>
         </section>
     </div>
-<script>
-    // 1. CONFIGURAÇÃO (Coloque suas chaves aqui)
-           const _URL = "https://ctxmprogrnsretxlmogf.supabase.co";
-        const _KEY = "sb_publishable_lTYnZuQKccyFvNmfSMgDcw_wfIBa-YG";
 
-    // 2. INICIALIZAÇÃO (O segredo está aqui: _supabase com underline)
-    const _supabase = window.supabase.createClient(_URL, _KEY);
+    <script>
+        const _URL = "https://ctxmprogrnsretxlmogf.supabase.co";
+        const _KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN0eG1wcm9ncm5zcmV0eGxtb2dmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0OTYyOTQsImV4cCI6MjA4ODA3MjI5NH0.AivDE28NG4X5-C6vbn8bkyByVcSoLhL9oOwPP5pPWII";
+        const _supabase = window.supabase.createClient(_URL, _KEY);
 
-    // 3. FUNÇÃO PARA MUDAR DE ABA
-    function aba(nome) {
-        document.getElementById('aba-pedidos').classList.add('hidden');
-        document.getElementById('aba-cardapio').classList.add('hidden');
-        document.getElementById('aba-config').classList.add('hidden');
-        document.getElementById('aba-' + nome).classList.remove('hidden');
-    }
+        function aba(n) {
+            document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+            document.getElementById('sec-' + n).classList.remove('hidden');
+        }
 
-    // 4. CARREGAR PEDIDOS (Corrigido para _supabase)
-    async function carregarPedidos() {
-        try {
-            const { data, error } = await _supabase.from('pedidos').select('*').order('id', {ascending: false});
-            if (error) throw error;
-
+        async function carregarPedidos() {
+            const { data } = await _supabase.from('pedidos').select('*').order('id', {ascending: false});
             document.getElementById('lista-pedidos').innerHTML = data.map(p => `
-                <div class="bg-white p-4 rounded shadow border-l-4 ${p.status === 'Pendente' ? 'border-yellow-400' : 'border-green-500'}">
-                    <div class="flex justify-between"><strong>${p.cliente}</strong> <span>R$ ${Number(p.total).toFixed(2)}</span></div>
-                    <p class="text-sm text-gray-600">${p.itens}</p>
-                    <div class="flex gap-2 mt-3">
-                        <button onclick="statusPedido(${p.id}, 'Preparando')" class="bg-blue-100 text-blue-700 px-2 rounded text-xs">Preparando</button>
-                        <button onclick="statusPedido(${p.id}, 'Saiu')" class="bg-orange-100 text-orange-700 px-2 rounded text-xs">Saiu</button>
-                        <button onclick="statusPedido(${p.id}, 'Entregue')" class="bg-green-100 text-green-700 px-2 rounded text-xs">Concluído</button>
+                <div class="bg-white p-3 rounded shadow border-l-4 ${p.status === 'Pendente' ? 'border-yellow-400' : 'border-green-500'}">
+                    <div class="flex justify-between font-bold text-sm"><span>${p.cliente}</span><span>R$ ${Number(p.total).toFixed(2)}</span></div>
+                    <p class="text-xs text-gray-600">${p.itens}</p>
+                    <div class="flex gap-2 mt-2">
+                        <button onclick="mudarStatus(${p.id}, 'Preparando')" class="bg-blue-100 px-2 rounded text-[10px]">Preparando</button>
+                        <button onclick="mudarStatus(${p.id}, 'Entregue')" class="bg-green-100 px-2 rounded text-[10px]">Concluir</button>
                     </div>
                 </div>
             `).join('');
-        } catch (err) {
-            console.error("Erro ao carregar pedidos:", err.message);
         }
-    }
 
-    // 5. ADICIONAR PRODUTO (Corrigido para _supabase)
-    async function addProduto() {
-        const nome = document.getElementById('p-nome').value;
-        const preco = document.getElementById('p-preco').value;
-        const imagem_url = document.getElementById('p-img').value;
-        const categoria = document.getElementById('p-cat').value;
+        async function salvarLanche() {
+            const nome = document.getElementById('p-nome').value;
+            const preco = document.getElementById('p-preco').value;
+            const descricao = document.getElementById('p-desc').value;
+            const imagem_url = document.getElementById('p-img').value;
+            
+            if(!nome || !preco) return alert("Preencha Nome e Preço!");
+            await _supabase.from('produtos').insert([{nome, preco, descricao, imagem_url}]);
+            alert("Salvo!");
+            location.reload();
+        }
 
-        const { error } = await _supabase.from('produtos').insert([{nome, preco, imagem_url, categoria}]);
-        
-        if (error) alert("Erro ao salvar: " + error.message);
-        else location.reload();
-    }
+        async function mudarStatus(id, s) {
+            await _supabase.from('pedidos').update({status: s}).eq('id', id);
+            carregarPedidos();
+        }
 
-    // 6. ATUALIZAR STATUS (Corrigido para _supabase)
-    async function statusPedido(id, s) {
-        await _supabase.from('pedidos').update({status: s}).eq('id', id);
+        async function salvarConfig() {
+            const taxa = document.getElementById('c-taxa').value;
+            const aberta = document.getElementById('c-aberta').value;
+            await _supabase.from('configuracoes').update({taxa_entrega: taxa, loja_aberta: aberta}).eq('id', 1);
+            alert("Ajustes salvos!");
+        }
+
+        setInterval(carregarPedidos, 5000);
         carregarPedidos();
-    }
-
-    // 7. SALVAR CONFIGURAÇÕES (Corrigido para _supabase)
-    async function saveConfig() {
-        const taxa = document.getElementById('c-taxa').value;
-        const aberta = document.getElementById('c-aberta').value;
-        await _supabase.from('configuracoes').update({taxa_entrega: taxa, loja_aberta: aberta}).eq('id', 1);
-        alert("Atualizado!");
-    }
-
-    // 8. EXECUÇÃO INICIAL
-    setInterval(carregarPedidos, 5000); // Atualiza a cada 5 segundos
-    carregarPedidos();
-</script>
+    </script>
 </body>
 </html>
