@@ -29,3 +29,7 @@ create table configuracoes (
 
 -- 4. Inserir configuração inicial (MUITO IMPORTANTE)
 insert into configuracoes (id, taxa_entrega, loja_aberta) values (1, 5.00, true);
+
+-- Permite que qualquer pessoa (seu admin) suba fotos na pasta 'fotos'
+CREATE POLICY "Permitir Upload" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'fotos');
+CREATE POLICY "Permitir Ver Fotos" ON storage.objects FOR SELECT USING (bucket_id = 'fotos');
